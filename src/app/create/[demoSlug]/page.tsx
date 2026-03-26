@@ -116,7 +116,9 @@ export default async function EditDemoPage({ params }: PageProps) {
     });
 
     if (error) {
-      redirect(`/preview/${previewSlug}?${previewParams.toString()}`);
+      const fallbackParams = new URLSearchParams(previewParams);
+      fallbackParams.set("force_preview", "1");
+      redirect(`/preview/${previewSlug}?${fallbackParams.toString()}`);
     }
 
     redirect(`/preview/${previewSlug}`);

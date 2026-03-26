@@ -1,4 +1,4 @@
-﻿import { notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import DemoLandingPage from "@/components/DemoLandingPage";
 import { hasSupabaseEnv, localDemos } from "@/lib/local-data";
 import { createClient } from "@/lib/supabase/server";
@@ -19,6 +19,7 @@ type PageProps = {
     contact_phone?: string;
     contact_email?: string;
     demo_slug?: string;
+    force_preview?: string;
   }>;
 };
 
@@ -27,8 +28,21 @@ export default async function PreviewPage({ params, searchParams }: PageProps) {
   const isLocalMode = !hasSupabaseEnv();
   const query = await searchParams;
 
-  if (isLocalMode && query.demo_slug) {
-    const demo = localDemos.find((item) => item.slug === query.demo_slug);
+  if ((isLocalMode || query.force_preview === "1") && query.demo_slug) {
+    const supabase = await createClient();
+    let demo = localDemos.find((item) => item.slug === query.demo_slug) ?? null;
+
+    if (!demo) {
+      const { data: demoData } = await supabase
+        .from("demos")
+        .select(
+          "id,title,category,slug,demo_url,preview_image,base_price,short_description,is_active,created_at",
+        )
+        .eq("slug", query.demo_slug)
+        .maybeSingle();
+      demo = demoData;
+    }
+
     if (!demo) notFound();
 
     const price = query.custom_price?.trim()
