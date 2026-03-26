@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import DemoCard from "@/components/DemoCard";
 import SearchBar from "@/components/SearchBar";
 import { hasSupabaseEnv, localDemos } from "@/lib/local-data";
@@ -52,21 +52,24 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
     );
   } else {
     const supabase = await createClient();
-    let query = supabase
-      .from("demos")
-      .select(
-        "id,title,category,slug,demo_url,preview_image,base_price,short_description,is_active,created_at",
-      )
-      .eq("is_active", true)
-      .order("created_at", { ascending: false });
-
     if (q) {
-      query = query.or(`title.ilike.%${q}%,category.ilike.%${q}%`);
-    }
+      const { data, error } = await supabase.rpc("search_demos", {
+        search_text: q,
+      });
+      demos = (data ?? []) as Demo[];
+      errorMessage = error?.message ?? "";
+    } else {
+      const { data, error } = await supabase
+        .from("demos")
+        .select(
+          "id,title,category,tags,slug,demo_url,preview_image,base_price,short_description,is_active,created_at",
+        )
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
 
-    const { data, error } = await query;
-    demos = (data ?? []) as Demo[];
-    errorMessage = error?.message ?? "";
+      demos = (data ?? []) as Demo[];
+      errorMessage = error?.message ?? "";
+    }
   }
 
   return (
