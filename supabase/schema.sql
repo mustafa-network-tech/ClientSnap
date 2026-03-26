@@ -62,16 +62,26 @@ create table if not exists admin_invite_codes (
   created_at timestamp with time zone default now()
 );
 
+create table if not exists preview_quota_by_ip (
+  ip_address text primary key,
+  attempts integer not null default 0,
+  window_started_at timestamp with time zone not null default now(),
+  blocked_until timestamp with time zone,
+  updated_at timestamp with time zone not null default now()
+);
+
 alter table admin_access_codes
 add column if not exists claimed_at timestamp with time zone;
 
 alter table admin_access_codes disable row level security;
 alter table admin_accounts disable row level security;
 alter table admin_invite_codes disable row level security;
+alter table preview_quota_by_ip disable row level security;
 
 grant select, insert, update on table public.admin_access_codes to anon, authenticated;
 grant select, insert, update on table public.admin_accounts to anon, authenticated;
 grant select, insert, update on table public.admin_invite_codes to anon, authenticated;
+grant select, insert, update on table public.preview_quota_by_ip to anon, authenticated;
 
 alter table custom_previews
 add column if not exists custom_cover_image text;

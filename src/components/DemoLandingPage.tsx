@@ -67,12 +67,14 @@ export default function DemoLandingPage({ data }: { data: LandingData }) {
   const coverImage = normalizeExternalUrl(data.customCoverImage || data.previewImage || null);
   const theme = resolveTheme(data.accentColor);
   const accent = theme.accent;
-  const authorizedWhatsapp = process.env.NEXT_PUBLIC_WHATSAPP_TARGET || "905456597551";
-  const ownerWhatsapp = sanitizeWhatsapp(authorizedWhatsapp);
+  const heroWhatsapp = sanitizeWhatsapp(data.ownerWhatsapp || data.contactPhone || "905000000000");
+  const fixedFooterWhatsapp = "905456597552";
+  const footerWhatsapp = sanitizeWhatsapp(fixedFooterWhatsapp);
   const message = encodeURIComponent(
     "Merhaba, hazırladığınız demo siteyi inceledim. Bu siteyi yaptırmak istiyorum.",
   );
-  const whatsappTarget = `https://wa.me/${ownerWhatsapp}?text=${message}`;
+  const heroWhatsappTarget = `https://wa.me/${heroWhatsapp}?text=${message}`;
+  const footerWhatsappTarget = `https://wa.me/${footerWhatsapp}?text=${message}`;
   const prices = formatPrice(data.priceValue);
 
   return (
@@ -107,7 +109,7 @@ export default function DemoLandingPage({ data }: { data: LandingData }) {
             </div>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <a href={whatsappTarget} target="_blank" rel="noreferrer" className="rounded-2xl px-6 py-3 text-center text-sm font-semibold text-white" style={{ backgroundColor: accent }}>
+              <a href={heroWhatsappTarget} target="_blank" rel="noreferrer" className="rounded-2xl px-6 py-3 text-center text-sm font-semibold text-white" style={{ backgroundColor: accent }}>
                 {data.heroPrimaryCta || "WhatsApp'tan Başlat"}
               </a>
               <a href="#detaylar" className="rounded-2xl border border-neutral-300 px-6 py-3 text-center text-sm font-semibold text-neutral-800">
@@ -211,10 +213,10 @@ export default function DemoLandingPage({ data }: { data: LandingData }) {
           <h2 className="text-3xl font-semibold text-neutral-900">Bu siteyi işletmenize özel hale getirelim</h2>
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-neutral-600">Sadece 1 mesaj ile hemen başlayabilirsiniz.</p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-            <a href={whatsappTarget} target="_blank" rel="noreferrer" className="rounded-2xl px-6 py-3 text-sm font-semibold text-white" style={{ backgroundColor: accent }}>
+            <a href={footerWhatsappTarget} target="_blank" rel="noreferrer" className="rounded-2xl px-6 py-3 text-sm font-semibold text-white" style={{ backgroundColor: accent }}>
               Bu Siteyi İstiyorum
             </a>
-            <a href={whatsappTarget} target="_blank" rel="noreferrer" className="rounded-2xl border border-neutral-300 px-6 py-3 text-sm font-semibold text-neutral-800">
+            <a href={footerWhatsappTarget} target="_blank" rel="noreferrer" className="rounded-2xl border border-neutral-300 px-6 py-3 text-sm font-semibold text-neutral-800">
               Teklif Al
             </a>
           </div>

@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { Buffer } from "node:buffer";
 import PreviewForm from "@/components/PreviewForm";
 import { requireAdminSession } from "@/lib/admin-auth";
@@ -10,12 +11,14 @@ import { Demo } from "@/types/demo";
 
 type PageProps = {
   params: Promise<{ demoSlug: string }>;
+  searchParams: Promise<{ error?: string }>;
 };
 
-export default async function EditDemoPage({ params }: PageProps) {
+export default async function EditDemoPage({ params, searchParams }: PageProps) {
   await requireAdminSession();
 
   const { demoSlug } = await params;
+  const pageParams = await searchParams;
   const isLocalMode = !hasSupabaseEnv();
   let demo: Demo | null = null;
 
@@ -89,6 +92,66 @@ export default async function EditDemoPage({ params }: PageProps) {
     }
 
     const innerSupabase = await createClient();
+    const headerStore = await headers();
+    const rawIp = headerStore.get("x-forwarded-for") || headerStore.get("x-real-ip") || "";
+    const ipAddress = rawIp.split(",")[0]?.trim() || "unknown";
+    const nowIso = new Date().toISOString();
+
+    const { data: quotaRow } = await innerSupabase
+      .from("preview_quota_by_ip")
+      .select("ip_address, attempts, window_started_at, blocked_until")
+      .eq("ip_address", ipAddress)
+      .maybeSingle();
+
+    if (!quotaRow) {
+      await innerSupabase.from("preview_quota_by_ip").insert({
+        ip_address: ipAddress,
+        attempts: 1,
+        window_started_at: nowIso,
+        blocked_until: null,
+        updated_at: nowIso,
+      });
+    } else {
+      const nowTime = new Date(nowIso).getTime();
+      const windowStart = new Date(quotaRow.window_started_at).getTime();
+      const blockedUntilTime = quotaRow.blocked_until ? new Date(quotaRow.blocked_until).getTime() : 0;
+      const isBlocked = blockedUntilTime > nowTime;
+      const isNewWindow = nowTime - windowStart >= 24 * 60 * 60 * 1000;
+
+      if (isBlocked) {
+        redirect(`/create/${demoSlug}?error=limit_reached`);
+      }
+
+      if (isNewWindow) {
+        await innerSupabase
+          .from("preview_quota_by_ip")
+          .update({
+            attempts: 1,
+            window_started_at: nowIso,
+            blocked_until: null,
+            updated_at: nowIso,
+          })
+          .eq("ip_address", ipAddress);
+      } else if (quotaRow.attempts >= 3) {
+        await innerSupabase
+          .from("preview_quota_by_ip")
+          .update({
+            blocked_until: new Date(windowStart + 24 * 60 * 60 * 1000).toISOString(),
+            updated_at: nowIso,
+          })
+          .eq("ip_address", ipAddress);
+        redirect(`/create/${demoSlug}?error=limit_reached`);
+      } else {
+        await innerSupabase
+          .from("preview_quota_by_ip")
+          .update({
+            attempts: quotaRow.attempts + 1,
+            updated_at: nowIso,
+          })
+          .eq("ip_address", ipAddress);
+      }
+    }
+
     const coverFile = formData.get("custom_cover_file");
     const maxFileSize = 2 * 1024 * 1024;
 
@@ -163,6 +226,11 @@ export default async function EditDemoPage({ params }: PageProps) {
         {isLocalMode ? (
           <p className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
             Local mod: onizleme kaydi veritabanina yazilmaz, URL parametresi ile ilerler.
+          </p>
+        ) : null}
+        {pageParams.error === "limit_reached" ? (
+          <p className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            Limitiniz donmustur. 24 saat dolmadan yeni demo olusturamazsiniz.
           </p>
         ) : null}
 
