@@ -8,25 +8,36 @@ type AdminLoginPageProps = {
   }>;
 };
 
+function normalizeAccessCode(value: string) {
+  return value
+    .trim()
+    .toUpperCase()
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/[_\s]+/g, "-")
+    .replace(/-+/g, "-");
+}
+
 export default async function AdminLoginPage({ searchParams }: AdminLoginPageProps) {
   const params = await searchParams;
 
   async function signInWithAccessCodeAction(formData: FormData) {
     "use server";
 
-    const accessCode = String(formData.get("access_code") || "").trim();
+    const accessCode = normalizeAccessCode(String(formData.get("access_code") || ""));
 
     if (!accessCode) {
       redirect("/admin/login?error=Sifre zorunludur");
     }
 
     const supabase = await createClient();
-    const { data: codeData, error: codeError } = await supabase
+    const { data: codeList, error: codeError } = await supabase
       .from("admin_access_codes")
-      .select("id")
-      .eq("code", accessCode)
+      .select("id, code")
       .eq("is_active", true)
-      .maybeSingle();
+      .limit(100);
+
+    const codeData =
+      codeList?.find((item) => normalizeAccessCode(item.code) === accessCode) ?? null;
 
     if (codeError || !codeData) {
       redirect("/admin/login?error=Gecersiz sifre");
@@ -80,7 +91,7 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
   async function signInWithPinAction(formData: FormData) {
     "use server";
 
-    const accessCode = String(formData.get("pin_access_code") || "").trim();
+    const accessCode = normalizeAccessCode(String(formData.get("pin_access_code") || ""));
     const userPin = String(formData.get("user_pin") || "").trim();
 
     if (!accessCode) {
@@ -92,13 +103,15 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
     }
 
     const supabase = await createClient();
-    const { data: codeData, error: codeError } = await supabase
+    const { data: codeList, error: codeError } = await supabase
       .from("admin_access_codes")
-      .select("id")
-      .eq("code", accessCode)
+      .select("id, code")
       .eq("is_active", true)
       .not("claimed_at", "is", null)
-      .single();
+      .limit(100);
+
+    const codeData =
+      codeList?.find((item) => normalizeAccessCode(item.code) === accessCode) ?? null;
 
     if (codeError || !codeData) {
       redirect("/admin/login?error=Kod veya 6 haneli kod hatali");

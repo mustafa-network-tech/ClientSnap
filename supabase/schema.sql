@@ -58,6 +58,12 @@ create table if not exists admin_accounts (
 alter table admin_access_codes
 add column if not exists claimed_at timestamp with time zone;
 
+alter table admin_access_codes disable row level security;
+alter table admin_accounts disable row level security;
+
+grant select, insert, update on table public.admin_access_codes to anon, authenticated;
+grant select, insert, update on table public.admin_accounts to anon, authenticated;
+
 alter table custom_previews
 add column if not exists custom_cover_image text;
 alter table custom_previews
