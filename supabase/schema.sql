@@ -55,14 +55,23 @@ create table if not exists admin_accounts (
   check (user_pin is null or user_pin ~ '^[0-9]{6}$')
 );
 
+create table if not exists admin_invite_codes (
+  id uuid primary key default gen_random_uuid(),
+  code text unique not null,
+  is_active boolean not null default true,
+  created_at timestamp with time zone default now()
+);
+
 alter table admin_access_codes
 add column if not exists claimed_at timestamp with time zone;
 
 alter table admin_access_codes disable row level security;
 alter table admin_accounts disable row level security;
+alter table admin_invite_codes disable row level security;
 
 grant select, insert, update on table public.admin_access_codes to anon, authenticated;
 grant select, insert, update on table public.admin_accounts to anon, authenticated;
+grant select, insert, update on table public.admin_invite_codes to anon, authenticated;
 
 alter table custom_previews
 add column if not exists custom_cover_image text;

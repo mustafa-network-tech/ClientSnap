@@ -59,3 +59,7 @@ values
 ('CSNAP-PRIME-2468', true)
 on conflict (code) do update set
   is_active = excluded.is_active;
+
+-- Eski 25 kod / 6 haneli akis devre disi
+update admin_access_codes
+set is_active = false;

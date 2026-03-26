@@ -20,116 +20,39 @@ function normalizeAccessCode(value: string) {
 export default async function AdminLoginPage({ searchParams }: AdminLoginPageProps) {
   const params = await searchParams;
 
-  async function signInWithAccessCodeAction(formData: FormData) {
+  async function signInAction(formData: FormData) {
     "use server";
 
-    const accessCode = normalizeAccessCode(String(formData.get("access_code") || ""));
+    const loginCode = normalizeAccessCode(String(formData.get("login_code") || ""));
 
-    if (!accessCode) {
-      redirect("/admin/login?error=Sifre zorunludur");
-    }
-
-    const supabase = await createClient();
-    const { data: codeList, error: codeError } = await supabase
-      .from("admin_access_codes")
-      .select("id, code")
-      .eq("is_active", true)
-      .limit(100);
-
-    const codeData =
-      codeList?.find((item) => normalizeAccessCode(item.code) === accessCode) ?? null;
-
-    if (codeError || !codeData) {
-      redirect("/admin/login?error=Gecersiz sifre");
-    }
-
-    const { data: existingAccount, error: existingAccountError } = await supabase
-      .from("admin_accounts")
-      .select("id, user_pin")
-      .eq("access_code_id", codeData.id)
-      .maybeSingle();
-
-    if (existingAccountError) {
-      redirect("/admin/login?error=Hesap kontrolu basarisiz");
-    }
-
-    if (existingAccount?.user_pin) {
-      redirect("/admin/login?error=Bu kod aktif edildi. Kod + 6 haneli kod ile giris yapin");
-    }
-
-    let accountId = existingAccount?.id;
-
-    if (!accountId) {
-      const { data: createdAccount, error: createError } = await supabase
-        .from("admin_accounts")
-        .insert({
-          access_code_id: codeData.id,
-          updated_at: new Date().toISOString(),
-        })
-        .select("id")
-        .single();
-
-      if (createError || !createdAccount) {
-        redirect("/admin/login?error=Hesap olusturulamadi");
-      }
-
-      accountId = createdAccount.id;
-    }
-
-    const cookieStore = await cookies();
-    cookieStore.set("admin_account_id", accountId, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 30,
-    });
-
-    redirect("/admin/profile");
-  }
-
-  async function signInWithPinAction(formData: FormData) {
-    "use server";
-
-    const accessCode = normalizeAccessCode(String(formData.get("pin_access_code") || ""));
-    const userPin = String(formData.get("user_pin") || "").trim();
-
-    if (!accessCode) {
+    if (!loginCode) {
       redirect("/admin/login?error=Kod zorunludur");
     }
 
-    if (!/^\d{6}$/.test(userPin)) {
-      redirect("/admin/login?error=6 haneli kod 6 rakam olmalidir");
+    const ownerCode = normalizeAccessCode(process.env.ADMIN_OWNER_CODE || "CSNAP-OWNER-904721");
+    let role: "owner" | "member" | null = null;
+
+    if (loginCode === ownerCode) {
+      role = "owner";
+    } else {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from("admin_invite_codes")
+        .select("id")
+        .eq("code", loginCode)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (!error && data) {
+        role = "member";
+      }
     }
 
-    const supabase = await createClient();
-    const { data: codeList, error: codeError } = await supabase
-      .from("admin_access_codes")
-      .select("id, code")
-      .eq("is_active", true)
-      .not("claimed_at", "is", null)
-      .limit(100);
-
-    const codeData =
-      codeList?.find((item) => normalizeAccessCode(item.code) === accessCode) ?? null;
-
-    if (codeError || !codeData) {
-      redirect("/admin/login?error=Kod veya 6 haneli kod hatali");
-    }
-
-    const { data, error } = await supabase
-      .from("admin_accounts")
-      .select("id")
-      .eq("access_code_id", codeData.id)
-      .eq("user_pin", userPin)
-      .maybeSingle();
-
-    if (error || !data) {
-      redirect("/admin/login?error=Kod veya 6 haneli kod hatali");
+    if (!role) {
+      redirect("/admin/login?error=Gecersiz kod");
     }
 
     const cookieStore = await cookies();
-    cookieStore.set("admin_account_id", data.id, {
+    cookieStore.set("admin_role", role, {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
@@ -146,7 +69,7 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
         <div className="mb-6 text-center">
           <h1 className="text-3xl font-semibold text-neutral-900">Yönetici Paneli</h1>
           <p className="mt-2 text-sm text-neutral-600">
-            Ilk giriste kod ile, sonraki girislerde kodunuz ve 6 haneli kodunuz ile devam edin.
+            Tek kod ile giris yapin. Davet kodlari sadece yonetici tarafindan uretilir.
           </p>
         </div>
 
@@ -155,55 +78,24 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
             {params.error}
           </div>
         ) : null}
-        <section className="grid gap-5 md:grid-cols-2">
-          <div className="rounded-3xl border border-neutral-200 bg-white p-8 shadow-sm">
-            <h2 className="text-xl font-semibold">Ilk Giris Kodu</h2>
-            <p className="mt-2 text-sm text-neutral-600">Sistemde tanimli 25 koddan biriyle ilk girisinizi yapin.</p>
+        <section className="rounded-3xl border border-neutral-200 bg-white p-8 shadow-sm">
+          <h2 className="text-xl font-semibold">Kod ile Giris</h2>
+          <p className="mt-2 text-sm text-neutral-600">Yonetici ana kodu veya size verilen davet kodunu girin.</p>
 
-            <form action={signInWithAccessCodeAction} className="mt-6 space-y-4">
-              <input
-                name="access_code"
-                type="password"
-                placeholder="Ilk giris sifresi"
-                className="w-full rounded-2xl border border-neutral-300 px-4 py-3"
-              />
-              <button
-                type="submit"
-                className="w-full rounded-2xl bg-neutral-900 px-6 py-4 text-white"
-              >
-                Ilk Giris Yap
-              </button>
-            </form>
-          </div>
-
-          <div className="rounded-3xl border border-neutral-200 bg-white p-8 shadow-sm">
-            <h2 className="text-xl font-semibold">6 Haneli Kod ile Giris</h2>
-            <p className="mt-2 text-sm text-neutral-600">Sonraki girislerde kodunuz ve 6 haneli kodunuz birlikte zorunludur.</p>
-
-            <form action={signInWithPinAction} className="mt-6 space-y-4">
-              <input
-                name="pin_access_code"
-                type="password"
-                placeholder="Size verilen kod"
-                className="w-full rounded-2xl border border-neutral-300 px-4 py-3"
-              />
-              <input
-                name="user_pin"
-                type="password"
-                inputMode="numeric"
-                pattern="\d{6}"
-                maxLength={6}
-                placeholder="6 haneli kod"
-                className="w-full rounded-2xl border border-neutral-300 px-4 py-3"
-              />
-              <button
-                type="submit"
-                className="w-full rounded-2xl border border-neutral-300 bg-white px-6 py-4 text-neutral-900"
-              >
-                6 Haneli Kod ile Gir
-              </button>
-            </form>
-          </div>
+          <form action={signInAction} className="mt-6 space-y-4">
+            <input
+              name="login_code"
+              type="password"
+              placeholder="Giris kodu"
+              className="w-full rounded-2xl border border-neutral-300 px-4 py-3"
+            />
+            <button
+              type="submit"
+              className="w-full rounded-2xl bg-neutral-900 px-6 py-4 text-white"
+            >
+              Giris Yap
+            </button>
+          </form>
         </section>
       </div>
     </main>

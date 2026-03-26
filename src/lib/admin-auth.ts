@@ -1,25 +1,23 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { createClient } from "@/lib/supabase/server";
 
 export async function requireAdminSession() {
   const cookieStore = await cookies();
-  const accountId = cookieStore.get("admin_account_id")?.value;
+  const role = cookieStore.get("admin_role")?.value;
 
-  if (!accountId) {
+  if (!role || (role !== "owner" && role !== "member")) {
     redirect("/admin/login?error=Giris gerekli");
   }
 
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("admin_accounts")
-    .select("id, user_pin")
-    .eq("id", accountId)
-    .maybeSingle();
+  return { role };
+}
 
-  if (!data || !data.user_pin) {
-    redirect("/admin/login?error=Oturum gecersiz");
+export async function requireOwnerSession() {
+  const session = await requireAdminSession();
+
+  if (session.role !== "owner") {
+    redirect("/create?error=Bu alan sadece yonetici icindir");
   }
 
-  return data;
+  return session;
 }

@@ -33,7 +33,7 @@ function normalizeSearchValue(value: string) {
 }
 
 export default async function CreatePage({ searchParams }: CreatePageProps) {
-  await requireAdminSession();
+  const session = await requireAdminSession();
 
   const params = await searchParams;
   const q = (params.q ?? "").trim();
@@ -78,6 +78,16 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
   return (
     <main className="min-h-screen bg-neutral-50 px-6 py-12">
       <div className="mx-auto max-w-6xl">
+        {session.role === "owner" ? (
+          <div className="mb-4 flex justify-end">
+            <Link
+              href="/admin/profile"
+              className="rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm text-neutral-700 hover:border-neutral-900 hover:text-neutral-900"
+            >
+              Davet Kodlari
+            </Link>
+          </div>
+        ) : null}
         <h1 className="text-3xl font-semibold">Demo Onizlemesi Olustur</h1>
         <p className="mt-2 text-neutral-600">
           Baslik, kategori veya etiket ile arayip en uygun demoyu hizla bulun.

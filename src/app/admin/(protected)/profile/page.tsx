@@ -1,6 +1,7 @@
+import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { requireOwnerSession } from "@/lib/admin-auth";
 
 type AdminProfilePageProps = {
   searchParams: Promise<{
@@ -10,98 +11,42 @@ type AdminProfilePageProps = {
 };
 
 export default async function AdminProfilePage({ searchParams }: AdminProfilePageProps) {
+  await requireOwnerSession();
   const params = await searchParams;
-  const cookieStore = await cookies();
-  const accountId = cookieStore.get("admin_account_id")?.value;
-
-  if (!accountId) {
-    redirect("/admin/login?error=Once giris yapin");
-  }
-
   const supabase = await createClient();
-  const { data: account } = await supabase
-    .from("admin_accounts")
-    .select("id, access_code_id, first_name, last_name, user_pin")
-    .eq("id", accountId)
-    .maybeSingle();
+  const { data: inviteCodes } = await supabase
+    .from("admin_invite_codes")
+    .select("code, is_active, created_at")
+    .order("created_at", { ascending: false })
+    .limit(20);
 
-  if (!account) {
-    redirect("/admin/login?error=Oturum bulunamadi");
-  }
-
-  async function saveProfileAction(formData: FormData) {
+  async function createInviteCodeAction() {
     "use server";
-
-    const cookieStoreServer = await cookies();
-    const currentAccountId = cookieStoreServer.get("admin_account_id")?.value;
-
-    if (!currentAccountId) {
-      redirect("/admin/login?error=Oturum suresi doldu");
-    }
-
-    const firstName = String(formData.get("first_name") || "").trim();
-    const lastName = String(formData.get("last_name") || "").trim();
-    const userPin = String(formData.get("user_pin") || "").trim();
-    const userPinConfirm = String(formData.get("user_pin_confirm") || "").trim();
-
-    if (!firstName || !lastName) {
-      redirect("/admin/profile?error=Ad ve soyad zorunludur");
-    }
-
-    if (!/^\d{6}$/.test(userPin)) {
-      redirect("/admin/profile?error=6 haneli kod 6 rakam olmalidir");
-    }
-
-    if (userPin !== userPinConfirm) {
-      redirect("/admin/profile?error=6 haneli kod tekrari eslesmiyor");
-    }
+    await requireOwnerSession();
 
     const supabaseServer = await createClient();
-    const { data: currentAccount, error: currentAccountError } = await supabaseServer
-      .from("admin_accounts")
-      .select("id, access_code_id")
-      .eq("id", currentAccountId)
-      .single();
-
-    if (currentAccountError || !currentAccount) {
-      redirect("/admin/profile?error=Hesap bulunamadi");
-    }
+    const generatedCode = `CSNAP-DAVET-${randomUUID().slice(0, 8).toUpperCase()}`;
 
     const { error } = await supabaseServer
-      .from("admin_accounts")
-      .update({
-        first_name: firstName,
-        last_name: lastName,
-        user_pin: userPin,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", currentAccountId);
+      .from("admin_invite_codes")
+      .insert({
+        code: generatedCode,
+        is_active: true,
+      });
 
     if (error) {
-      redirect("/admin/profile?error=Profil kaydedilemedi, 6 haneli kod kullanimda olabilir");
+      redirect("/admin/profile?error=Davet kodu olusturulamadi");
     }
 
-    const { error: claimError } = await supabaseServer
-      .from("admin_access_codes")
-      .update({
-        claimed_at: new Date().toISOString(),
-      })
-      .eq("id", currentAccount.access_code_id)
-      .is("claimed_at", null);
-
-    if (claimError) {
-      redirect("/admin/profile?error=Kod aktivasyonu basarisiz");
-    }
-
-    redirect("/create");
+    redirect(`/admin/profile?success=${encodeURIComponent(generatedCode)}`);
   }
 
   return (
     <main className="min-h-screen bg-neutral-50 px-6 py-12">
       <div className="mx-auto w-full max-w-2xl rounded-3xl border border-neutral-200 bg-white p-8 shadow-sm">
-        <h1 className="text-3xl font-semibold text-neutral-900">Profil Ayarlari</h1>
+        <h1 className="text-3xl font-semibold text-neutral-900">Davet Kodlari</h1>
         <p className="mt-2 text-sm text-neutral-600">
-          Ilk giris tamamlandi. Simdi ad-soyad ve sonraki girisler icin 6 haneli kod olusturun.
+          Buradan yeni davet kodu olusturup diger kullanicilari sisteme alabilirsiniz.
         </p>
 
         {params.error ? (
@@ -112,48 +57,33 @@ export default async function AdminProfilePage({ searchParams }: AdminProfilePag
 
         {params.success ? (
           <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            {params.success}
+            Yeni davet kodu: <span className="font-semibold">{params.success}</span>
           </div>
         ) : null}
 
-        <form action={saveProfileAction} className="mt-6 space-y-4">
-          <input
-            name="first_name"
-            type="text"
-            placeholder="Ad"
-            defaultValue={account.first_name ?? ""}
-            className="w-full rounded-2xl border border-neutral-300 px-4 py-3"
-          />
-          <input
-            name="last_name"
-            type="text"
-            placeholder="Soyad"
-            defaultValue={account.last_name ?? ""}
-            className="w-full rounded-2xl border border-neutral-300 px-4 py-3"
-          />
-          <input
-            name="user_pin"
-            type="password"
-            inputMode="numeric"
-            pattern="\d{6}"
-            maxLength={6}
-            placeholder="6 haneli kod"
-            className="w-full rounded-2xl border border-neutral-300 px-4 py-3"
-          />
-          <input
-            name="user_pin_confirm"
-            type="password"
-            inputMode="numeric"
-            pattern="\d{6}"
-            maxLength={6}
-            placeholder="6 haneli kod tekrar"
-            className="w-full rounded-2xl border border-neutral-300 px-4 py-3"
-          />
-
+        <form action={createInviteCodeAction} className="mt-6">
           <button type="submit" className="w-full rounded-2xl bg-neutral-900 px-6 py-4 text-white">
-            Profili Kaydet
+            Yeni Davet Kodu Uret
           </button>
         </form>
+
+        <div className="mt-8 rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+          <h2 className="text-sm font-semibold text-neutral-900">Son Kodlar</h2>
+          <div className="mt-3 space-y-2 text-sm text-neutral-700">
+            {(inviteCodes ?? []).length === 0 ? (
+              <p>Henuz davet kodu yok.</p>
+            ) : (
+              inviteCodes?.map((item) => (
+                <div key={item.code} className="flex items-center justify-between rounded-xl bg-white px-3 py-2">
+                  <span className="font-medium">{item.code}</span>
+                  <span className={item.is_active ? "text-emerald-600" : "text-neutral-500"}>
+                    {item.is_active ? "Aktif" : "Pasif"}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
     </main>
   );
