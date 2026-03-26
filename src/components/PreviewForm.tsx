@@ -1,8 +1,12 @@
-﻿type PreviewFormDefaults = {
+type PreviewFormDefaults = {
   company_name?: string;
   custom_title?: string;
   custom_description?: string;
   custom_price?: string;
+  custom_cover_image?: string;
+  accent_color?: string;
+  hero_primary_cta?: string;
+  hero_secondary_cta?: string;
   contact_name?: string;
   contact_phone?: string;
   contact_email?: string;
@@ -37,8 +41,32 @@ export default function PreviewForm({ action, defaults }: Props) {
       />
       <input
         name="custom_price"
-        placeholder="Özel fiyat"
+        placeholder="Özel fiyat (örn: 15000)"
         defaultValue={defaults?.custom_price}
+        className="w-full rounded-2xl border px-4 py-3"
+      />
+      <input
+        name="custom_cover_image"
+        placeholder="Kapak görsel URL (opsiyonel)"
+        defaultValue={defaults?.custom_cover_image}
+        className="w-full rounded-2xl border px-4 py-3"
+      />
+      <input
+        name="accent_color"
+        placeholder="Vurgu rengi HEX (örn: #111827)"
+        defaultValue={defaults?.accent_color}
+        className="w-full rounded-2xl border px-4 py-3"
+      />
+      <input
+        name="hero_primary_cta"
+        placeholder="Birincil CTA metni"
+        defaultValue={defaults?.hero_primary_cta}
+        className="w-full rounded-2xl border px-4 py-3"
+      />
+      <input
+        name="hero_secondary_cta"
+        placeholder="İkincil CTA metni"
+        defaultValue={defaults?.hero_secondary_cta}
         className="w-full rounded-2xl border px-4 py-3"
       />
       <input

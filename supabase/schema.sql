@@ -24,6 +24,10 @@ create table if not exists custom_previews (
   custom_title text,
   custom_description text,
   custom_price numeric(10,2),
+  custom_cover_image text,
+  accent_color text,
+  hero_primary_cta text,
+  hero_secondary_cta text,
   contact_name text,
   contact_phone text,
   contact_email text,
@@ -31,6 +35,15 @@ create table if not exists custom_previews (
   status text default 'active',
   created_at timestamp with time zone default now()
 );
+
+alter table custom_previews
+add column if not exists custom_cover_image text;
+alter table custom_previews
+add column if not exists accent_color text;
+alter table custom_previews
+add column if not exists hero_primary_cta text;
+alter table custom_previews
+add column if not exists hero_secondary_cta text;
 
 create index if not exists idx_demos_category on demos(category);
 create index if not exists idx_demos_title on demos(title);

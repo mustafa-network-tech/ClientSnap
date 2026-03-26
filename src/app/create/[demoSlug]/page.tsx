@@ -40,6 +40,10 @@ export default async function EditDemoPage({ params }: PageProps) {
     const customTitle = String(formData.get("custom_title") || "").trim();
     const customDescription = String(formData.get("custom_description") || "").trim();
     const customPriceRaw = String(formData.get("custom_price") || "").trim();
+    const customCoverImage = String(formData.get("custom_cover_image") || "").trim();
+    const accentColor = String(formData.get("accent_color") || "").trim();
+    const heroPrimaryCta = String(formData.get("hero_primary_cta") || "").trim();
+    const heroSecondaryCta = String(formData.get("hero_secondary_cta") || "").trim();
     const contactName = String(formData.get("contact_name") || "").trim();
     const contactPhone = String(formData.get("contact_phone") || "").trim();
     const contactEmail = String(formData.get("contact_email") || "").trim();
@@ -55,6 +59,10 @@ export default async function EditDemoPage({ params }: PageProps) {
       custom_title: customTitle,
       custom_description: customDescription,
       custom_price: customPriceRaw,
+      custom_cover_image: customCoverImage,
+      accent_color: accentColor,
+      hero_primary_cta: heroPrimaryCta,
+      hero_secondary_cta: heroSecondaryCta,
       contact_name: contactName,
       contact_phone: contactPhone,
       contact_email: contactEmail,
@@ -73,6 +81,10 @@ export default async function EditDemoPage({ params }: PageProps) {
       custom_title: customTitle || null,
       custom_description: customDescription || null,
       custom_price: Number.isFinite(customPrice as number) ? customPrice : null,
+      custom_cover_image: customCoverImage || null,
+      accent_color: accentColor || null,
+      hero_primary_cta: heroPrimaryCta || null,
+      hero_secondary_cta: heroSecondaryCta || null,
       contact_name: contactName || null,
       contact_phone: contactPhone || null,
       contact_email: contactEmail || null,
