@@ -1,4 +1,4 @@
-﻿import { getCategoryContent } from "@/lib/demo-content";
+import { getCategoryContent } from "@/lib/demo-content";
 import { normalizeExternalUrl } from "@/lib/utils";
 
 type LandingData = {
@@ -67,7 +67,8 @@ export default function DemoLandingPage({ data }: { data: LandingData }) {
   const coverImage = normalizeExternalUrl(data.customCoverImage || data.previewImage || null);
   const theme = resolveTheme(data.accentColor);
   const accent = theme.accent;
-  const ownerWhatsapp = sanitizeWhatsapp(data.ownerWhatsapp || data.contactPhone || "905000000000");
+  const authorizedWhatsapp = process.env.NEXT_PUBLIC_WHATSAPP_TARGET || "905456597551";
+  const ownerWhatsapp = sanitizeWhatsapp(authorizedWhatsapp);
   const message = encodeURIComponent(
     "Merhaba, hazırladığınız demo siteyi inceledim. Bu siteyi yaptırmak istiyorum.",
   );
