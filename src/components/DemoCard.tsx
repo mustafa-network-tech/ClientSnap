@@ -32,7 +32,7 @@ export default function DemoCard({ demo }: Props) {
             />
           ) : (
             <div className="flex h-[62%] items-center justify-center text-xs text-neutral-400">
-              Demo preview
+              Demo onizleme
             </div>
           )}
           <div className="grid h-[38%] grid-cols-3 gap-2 p-2">
@@ -47,19 +47,19 @@ export default function DemoCard({ demo }: Props) {
         <div className="mb-2 text-sm text-neutral-500">{demo.category}</div>
         <h3 className="text-xl font-semibold">{demo.title}</h3>
         <p className="mt-2 text-sm leading-6 text-neutral-600">
-          {demo.short_description || "No description provided."}
+          {demo.short_description || "Aciklama eklenmemis."}
         </p>
 
         <div className="mt-4 flex items-center justify-between">
           <span className="text-sm font-medium text-neutral-800">
-            {demo.base_price ? `${demo.base_price} TL` : "Price not set"}
+            {demo.base_price ? `${demo.base_price} TL` : "Fiyat girilmemis"}
           </span>
 
           <Link
             href={`/create/${demo.slug}`}
             className="rounded-xl bg-neutral-900 px-4 py-2 text-sm text-white"
           >
-            Edit Demo
+            Demo Duzenle
           </Link>
         </div>
       </div>

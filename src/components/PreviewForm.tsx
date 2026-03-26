@@ -73,7 +73,7 @@ export default function PreviewForm({ action, defaults }: Props) {
         <input
           name="stock_image_tag"
           list="stock-image-tags"
-          placeholder="Orn: sea, camera, beauty, real estate"
+          placeholder="Orn: deniz, kamera, guzellik, emlak"
           className="w-full rounded-2xl border bg-white px-4 py-3 text-sm text-neutral-700"
         />
         <datalist id="stock-image-tags">

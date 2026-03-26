@@ -1,76 +1,139 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
 type AdminLoginPageProps = {
   searchParams: Promise<{
     error?: string;
-    success?: string;
   }>;
 };
 
 export default async function AdminLoginPage({ searchParams }: AdminLoginPageProps) {
   const params = await searchParams;
 
-  async function signInAction(formData: FormData) {
+  async function signInWithAccessCodeAction(formData: FormData) {
     "use server";
 
-    const email = String(formData.get("email") || "").trim();
-    const password = String(formData.get("password") || "").trim();
+    const accessCode = String(formData.get("access_code") || "").trim();
 
-    if (!email || !password) {
-      redirect("/admin/login?error=E-posta ve sifre zorunludur");
+    if (!accessCode) {
+      redirect("/admin/login?error=Sifre zorunludur");
     }
 
     const supabase = await createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: codeData, error: codeError } = await supabase
+      .from("admin_access_codes")
+      .select("id")
+      .eq("code", accessCode)
+      .eq("is_active", true)
+      .maybeSingle();
 
-    if (error) {
-      redirect(`/admin/login?error=${encodeURIComponent(error.message)}`);
+    if (codeError || !codeData) {
+      redirect("/admin/login?error=Gecersiz sifre");
     }
+
+    const { data: existingAccount, error: existingAccountError } = await supabase
+      .from("admin_accounts")
+      .select("id, user_pin")
+      .eq("access_code_id", codeData.id)
+      .maybeSingle();
+
+    if (existingAccountError) {
+      redirect("/admin/login?error=Hesap kontrolu basarisiz");
+    }
+
+    if (existingAccount?.user_pin) {
+      redirect("/admin/login?error=Bu kod aktif edildi. Kod + 6 haneli kod ile giris yapin");
+    }
+
+    let accountId = existingAccount?.id;
+
+    if (!accountId) {
+      const { data: createdAccount, error: createError } = await supabase
+        .from("admin_accounts")
+        .insert({
+          access_code_id: codeData.id,
+          updated_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+
+      if (createError || !createdAccount) {
+        redirect("/admin/login?error=Hesap olusturulamadi");
+      }
+
+      accountId = createdAccount.id;
+    }
+
+    const cookieStore = await cookies();
+    cookieStore.set("admin_account_id", accountId, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
+
+    redirect("/admin/profile");
+  }
+
+  async function signInWithPinAction(formData: FormData) {
+    "use server";
+
+    const accessCode = String(formData.get("pin_access_code") || "").trim();
+    const userPin = String(formData.get("user_pin") || "").trim();
+
+    if (!accessCode) {
+      redirect("/admin/login?error=Kod zorunludur");
+    }
+
+    if (!/^\d{6}$/.test(userPin)) {
+      redirect("/admin/login?error=6 haneli kod 6 rakam olmalidir");
+    }
+
+    const supabase = await createClient();
+    const { data: codeData, error: codeError } = await supabase
+      .from("admin_access_codes")
+      .select("id")
+      .eq("code", accessCode)
+      .eq("is_active", true)
+      .not("claimed_at", "is", null)
+      .single();
+
+    if (codeError || !codeData) {
+      redirect("/admin/login?error=Kod veya 6 haneli kod hatali");
+    }
+
+    const { data, error } = await supabase
+      .from("admin_accounts")
+      .select("id")
+      .eq("access_code_id", codeData.id)
+      .eq("user_pin", userPin)
+      .maybeSingle();
+
+    if (error || !data) {
+      redirect("/admin/login?error=Kod veya 6 haneli kod hatali");
+    }
+
+    const cookieStore = await cookies();
+    cookieStore.set("admin_account_id", data.id, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
 
     redirect("/create");
   }
 
-  async function signUpAction(formData: FormData) {
-    "use server";
-
-    const fullName = String(formData.get("full_name") || "").trim();
-    const email = String(formData.get("signup_email") || "").trim();
-    const whatsapp = String(formData.get("whatsapp") || "").trim();
-    const password = String(formData.get("signup_password") || "").trim();
-
-    if (!fullName || !email || !password) {
-      redirect("/admin/login?error=Kayit icin ad, e-posta ve sifre gereklidir");
-    }
-
-    const supabase = await createClient();
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          whatsapp,
-        },
-      },
-    });
-
-    if (error) {
-      redirect(`/admin/login?error=${encodeURIComponent(error.message)}`);
-    }
-
-    redirect(
-      "/admin/login?success=Kayit olusturuldu. E-posta dogrulama aciksa lutfen gelen kutunuzu kontrol edin.",
-    );
-  }
-
   return (
-    <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-6 py-10">
-      <div className="w-full max-w-5xl">
+    <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-6 py-12">
+      <div className="w-full max-w-3xl">
         <div className="mb-6 text-center">
           <h1 className="text-3xl font-semibold text-neutral-900">Yönetici Paneli</h1>
           <p className="mt-2 text-sm text-neutral-600">
-            Giriş yapabilir veya yeni kullanıcı hesabı oluşturabilirsiniz.
+            Ilk giriste kod ile, sonraki girislerde kodunuz ve 6 haneli kodunuz ile devam edin.
           </p>
         </div>
 
@@ -79,77 +142,52 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
             {params.error}
           </div>
         ) : null}
-        {params.success ? (
-          <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            {params.success}
-          </div>
-        ) : null}
-
         <section className="grid gap-5 md:grid-cols-2">
           <div className="rounded-3xl border border-neutral-200 bg-white p-8 shadow-sm">
-            <h2 className="text-xl font-semibold">Yönetici Girişi</h2>
-            <p className="mt-2 text-sm text-neutral-600">
-              Mevcut hesabınızla panelinize giriş yapın.
-            </p>
+            <h2 className="text-xl font-semibold">Ilk Giris Kodu</h2>
+            <p className="mt-2 text-sm text-neutral-600">Sistemde tanimli 25 koddan biriyle ilk girisinizi yapin.</p>
 
-            <form action={signInAction} className="mt-6 space-y-4">
+            <form action={signInWithAccessCodeAction} className="mt-6 space-y-4">
               <input
-                name="email"
-                type="email"
-                placeholder="E-posta"
-                className="w-full rounded-2xl border border-neutral-300 px-4 py-3"
-              />
-              <input
-                name="password"
+                name="access_code"
                 type="password"
-                placeholder="Şifre"
+                placeholder="Ilk giris sifresi"
                 className="w-full rounded-2xl border border-neutral-300 px-4 py-3"
               />
               <button
                 type="submit"
                 className="w-full rounded-2xl bg-neutral-900 px-6 py-4 text-white"
               >
-                Giriş Yap
+                Ilk Giris Yap
               </button>
             </form>
           </div>
 
           <div className="rounded-3xl border border-neutral-200 bg-white p-8 shadow-sm">
-            <h2 className="text-xl font-semibold">Kullanıcı Ol</h2>
-            <p className="mt-2 text-sm text-neutral-600">
-              Yeni hesap oluşturup kendi demo panelinizi başlatın.
-            </p>
+            <h2 className="text-xl font-semibold">6 Haneli Kod ile Giris</h2>
+            <p className="mt-2 text-sm text-neutral-600">Sonraki girislerde kodunuz ve 6 haneli kodunuz birlikte zorunludur.</p>
 
-            <form action={signUpAction} className="mt-6 space-y-4">
+            <form action={signInWithPinAction} className="mt-6 space-y-4">
               <input
-                name="full_name"
-                type="text"
-                placeholder="Ad Soyad"
-                className="w-full rounded-2xl border border-neutral-300 px-4 py-3"
-              />
-              <input
-                name="signup_email"
-                type="email"
-                placeholder="E-posta"
-                className="w-full rounded-2xl border border-neutral-300 px-4 py-3"
-              />
-              <input
-                name="whatsapp"
-                type="tel"
-                placeholder="WhatsApp Numarası"
-                className="w-full rounded-2xl border border-neutral-300 px-4 py-3"
-              />
-              <input
-                name="signup_password"
+                name="pin_access_code"
                 type="password"
-                placeholder="Şifre"
+                placeholder="Size verilen kod"
+                className="w-full rounded-2xl border border-neutral-300 px-4 py-3"
+              />
+              <input
+                name="user_pin"
+                type="password"
+                inputMode="numeric"
+                pattern="\d{6}"
+                maxLength={6}
+                placeholder="6 haneli kod"
                 className="w-full rounded-2xl border border-neutral-300 px-4 py-3"
               />
               <button
                 type="submit"
-                className="w-full rounded-2xl bg-neutral-900 px-6 py-4 text-white"
+                className="w-full rounded-2xl border border-neutral-300 bg-white px-6 py-4 text-neutral-900"
               >
-                Hesap Oluştur
+                6 Haneli Kod ile Gir
               </button>
             </form>
           </div>

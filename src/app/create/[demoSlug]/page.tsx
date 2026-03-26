@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { Buffer } from "node:buffer";
 import PreviewForm from "@/components/PreviewForm";
+import { requireAdminSession } from "@/lib/admin-auth";
 import { hasSupabaseEnv, localDemos } from "@/lib/local-data";
 import { findStockImageByTag } from "@/lib/stock-images";
 import { createClient } from "@/lib/supabase/server";
@@ -12,6 +13,8 @@ type PageProps = {
 };
 
 export default async function EditDemoPage({ params }: PageProps) {
+  await requireAdminSession();
+
   const { demoSlug } = await params;
   const isLocalMode = !hasSupabaseEnv();
   let demo: Demo | null = null;

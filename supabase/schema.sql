@@ -36,6 +36,28 @@ create table if not exists custom_previews (
   created_at timestamp with time zone default now()
 );
 
+create table if not exists admin_access_codes (
+  id uuid primary key default gen_random_uuid(),
+  code text unique not null,
+  is_active boolean not null default true,
+  claimed_at timestamp with time zone,
+  created_at timestamp with time zone default now()
+);
+
+create table if not exists admin_accounts (
+  id uuid primary key default gen_random_uuid(),
+  access_code_id uuid unique not null references admin_access_codes(id) on delete cascade,
+  first_name text,
+  last_name text,
+  user_pin text unique,
+  created_at timestamp with time zone default now(),
+  updated_at timestamp with time zone default now(),
+  check (user_pin is null or user_pin ~ '^[0-9]{6}$')
+);
+
+alter table admin_access_codes
+add column if not exists claimed_at timestamp with time zone;
+
 alter table custom_previews
 add column if not exists custom_cover_image text;
 alter table custom_previews

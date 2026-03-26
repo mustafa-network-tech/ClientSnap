@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "ClientSnap",
-  description: "Create personalized client offer pages in minutes.",
+  description: "Kisisellestirilmis musteri teklif sayfalarini dakikalar icinde olusturun.",
 };
 
 export default function RootLayout({
@@ -23,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="tr" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="bg-zinc-50 text-zinc-900 antialiased">{children}</body>
     </html>
   );

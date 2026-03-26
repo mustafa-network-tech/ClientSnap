@@ -1,4 +1,4 @@
-﻿export type DemoContent = {
+export type DemoContent = {
   nav: string[];
   heroTitle: string;
   heroDescription: string;
@@ -44,7 +44,7 @@ const defaultContent: DemoContent = {
   about:
     "Ekibimiz, hizmet satan markalar icin hizli karar aldiran sade ama guclu landing page deneyimleri tasarlar.",
   galleryTitle: "Calisma Ornekleri",
-  galleryItems: ["Modern Hero Layout", "Service Card Grid", "Conversion CTA Blocks"],
+  galleryItems: ["Modern Kahraman Alani", "Hizmet Kart Duzeni", "Donusum Cagri Bloklari"],
   testimonials: [
     { name: "Selin Y.", role: "Isletme Sahibi", quote: "Musteri gorusmelerimiz belirgin sekilde hizlandi." },
     { name: "Mert K.", role: "Danisman", quote: "Sunum netlesince teklif donus oranlari artti." },
@@ -61,7 +61,7 @@ const defaultContent: DemoContent = {
 };
 
 export const categoryContentMap: Record<string, Partial<DemoContent>> = {
-  dental: {
+  "dis-klinigi": {
     heroTitle: "Saglikli ve estetik gulusler icin profesyonel yaklasim",
     heroDescription: "Modern tedavi yontemleri ve guven veren hasta deneyimi.",
     primaryCta: "Randevu Al",
@@ -74,7 +74,7 @@ export const categoryContentMap: Record<string, Partial<DemoContent>> = {
     galleryTitle: "Klinik ve Uygulama Goruntuleri",
     galleryItems: ["Klinik Karsilama", "Tedavi Odalari", "Hasta Deneyimi"],
   },
-  lawyer: {
+  avukat: {
     heroTitle: "Hukuki sureclerde guvenilir ve net cozum ortaginiz",
     heroDescription: "Bireysel ve kurumsal muvekkiller icin profesyonel danismanlik.",
     primaryCta: "Hemen Bilgi Al",
@@ -87,7 +87,7 @@ export const categoryContentMap: Record<string, Partial<DemoContent>> = {
     galleryTitle: "Calisma Alanlari",
     galleryItems: ["Kurumsal Danismanlik", "Dava Surecleri", "Hukuki Degerlendirme"],
   },
-  beauty: {
+  guzellik: {
     services: [
       { title: "Cilt Bakimi", description: "Uzman ekip ile cilt tipine uygun bakim surecleri." },
       { title: "Sac Tasarimi", description: "Modern sac kesimi ve sekillendirme uygulamalari." },
@@ -96,10 +96,10 @@ export const categoryContentMap: Record<string, Partial<DemoContent>> = {
     galleryTitle: "Salon Calismalari",
     galleryItems: ["Bakim Uygulamalari", "Sac Donusumleri", "Makyaj Sonuclari"],
   },
-  "real-estate": {
+  emlak: {
     services: [
       { title: "Satilik Portfoy", description: "Satin alma odakli secili ilan vitrini." },
-      { title: "Kiralik Cözümler", description: "Hizli geri donus icin optimize edilmis listeleme." },
+      { title: "Kiralik Cozumler", description: "Hizli geri donus icin optimize edilmis listeleme." },
       { title: "Yatirim Danismanligi", description: "Bolge bazli veri destekli karar sureci." },
     ],
     galleryTitle: "Portfoy Calismalari",
