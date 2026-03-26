@@ -45,12 +45,6 @@ export default async function PreviewPage({ params, searchParams }: PageProps) {
 
     if (!demo) notFound();
 
-    const price = query.custom_price?.trim()
-      ? `${query.custom_price} TL`
-      : demo.base_price
-        ? `${demo.base_price} TL`
-        : "Price on request";
-
     return (
       <DemoLandingPage
         data={{
@@ -60,11 +54,16 @@ export default async function PreviewPage({ params, searchParams }: PageProps) {
             query.custom_description ||
             demo.short_description ||
             "Landing page preview for your selected demo.",
-          priceLabel: price,
+          priceValue: query.custom_price?.trim()
+            ? Number(query.custom_price.replace(",", "."))
+            : demo.base_price,
           contactName: query.contact_name,
           contactPhone: query.contact_phone,
           contactEmail: query.contact_email,
-          demoUrl: demo.demo_url,
+          ownerWhatsapp: query.contact_phone,
+          ownerEmail: query.contact_email,
+          ownerName: query.contact_name,
+          ownerBrandName: query.company_name,
           previewImage: demo.preview_image,
           customCoverImage: query.custom_cover_image,
           accentColor: query.accent_color,
@@ -99,11 +98,14 @@ export default async function PreviewPage({ params, searchParams }: PageProps) {
           preview.custom_description ||
           preview.demos.short_description ||
           "Landing page preview for your selected demo.",
-        priceLabel: price ? `${price} TL` : "Price on request",
+        priceValue: typeof price === "number" ? price : null,
         contactName: preview.contact_name,
         contactPhone: preview.contact_phone,
         contactEmail: preview.contact_email,
-        demoUrl: preview.demos.demo_url,
+        ownerWhatsapp: preview.contact_phone,
+        ownerEmail: preview.contact_email,
+        ownerName: preview.contact_name,
+        ownerBrandName: preview.company_name,
         previewImage: preview.demos.preview_image,
         customCoverImage: preview.custom_cover_image,
         accentColor: preview.accent_color,
