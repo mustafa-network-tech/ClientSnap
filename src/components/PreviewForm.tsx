@@ -51,6 +51,20 @@ export default function PreviewForm({ action, defaults }: Props) {
         defaultValue={defaults?.custom_cover_image}
         className="w-full rounded-2xl border px-4 py-3"
       />
+      <div className="rounded-2xl border border-dashed border-neutral-300 p-4">
+        <label className="mb-2 block text-sm font-medium text-neutral-700">
+          Cihazdan kapak görseli yukle (onerilen)
+        </label>
+        <input
+          name="custom_cover_file"
+          type="file"
+          accept="image/*"
+          className="block w-full text-sm text-neutral-600 file:mr-3 file:rounded-xl file:border-0 file:bg-neutral-900 file:px-3 file:py-2 file:text-white"
+        />
+        <p className="mt-2 text-xs text-neutral-500">
+          Not: Canli ortamda Supabase Storage aktifse secilen gorsel yuklenir.
+        </p>
+      </div>
       <input
         name="accent_color"
         placeholder="Vurgu rengi HEX (örn: #111827)"

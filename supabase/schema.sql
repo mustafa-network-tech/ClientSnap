@@ -50,6 +50,22 @@ create index if not exists idx_demos_title on demos(title);
 create index if not exists idx_demos_tags_gin on demos using gin (tags);
 create index if not exists idx_custom_previews_slug on custom_previews(preview_slug);
 
+insert into storage.buckets (id, name, public)
+values ('demo-covers', 'demo-covers', true)
+on conflict (id) do nothing;
+
+drop policy if exists "demo_covers_public_read" on storage.objects;
+create policy "demo_covers_public_read"
+on storage.objects for select
+to public
+using (bucket_id = 'demo-covers');
+
+drop policy if exists "demo_covers_public_insert" on storage.objects;
+create policy "demo_covers_public_insert"
+on storage.objects for insert
+to public
+with check (bucket_id = 'demo-covers');
+
 create or replace function public.search_demos(search_text text)
 returns setof demos
 language sql

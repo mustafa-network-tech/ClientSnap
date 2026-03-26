@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { Buffer } from "node:buffer";
 import PreviewForm from "@/components/PreviewForm";
 import { hasSupabaseEnv, localDemos } from "@/lib/local-data";
 import { createClient } from "@/lib/supabase/server";
@@ -40,7 +41,7 @@ export default async function EditDemoPage({ params }: PageProps) {
     const customTitle = String(formData.get("custom_title") || "").trim();
     const customDescription = String(formData.get("custom_description") || "").trim();
     const customPriceRaw = String(formData.get("custom_price") || "").trim();
-    const customCoverImage = String(formData.get("custom_cover_image") || "").trim();
+    let customCoverImage = String(formData.get("custom_cover_image") || "").trim();
     const accentColor = String(formData.get("accent_color") || "").trim();
     const heroPrimaryCta = String(formData.get("hero_primary_cta") || "").trim();
     const heroSecondaryCta = String(formData.get("hero_secondary_cta") || "").trim();
@@ -74,6 +75,28 @@ export default async function EditDemoPage({ params }: PageProps) {
     }
 
     const innerSupabase = await createClient();
+    const coverFile = formData.get("custom_cover_file");
+
+    if (coverFile instanceof File && coverFile.size > 0) {
+      const bucketName = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "demo-covers";
+      const safeName = `${previewSlug}-${Date.now()}.${coverFile.name.split(".").pop() || "jpg"}`;
+      const objectPath = `previews/${safeName}`;
+      const fileBytes = Buffer.from(await coverFile.arrayBuffer());
+
+      const { error: uploadError } = await innerSupabase.storage
+        .from(bucketName)
+        .upload(objectPath, fileBytes, {
+          contentType: coverFile.type || "image/jpeg",
+          upsert: true,
+        });
+
+      if (!uploadError) {
+        const { data: publicData } = innerSupabase.storage
+          .from(bucketName)
+          .getPublicUrl(objectPath);
+        customCoverImage = publicData.publicUrl || customCoverImage;
+      }
+    }
 
     const { error } = await innerSupabase.from("custom_previews").insert({
       demo_id: demoId,
