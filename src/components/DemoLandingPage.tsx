@@ -26,19 +26,44 @@ function AccentButton({ href, text, accent }: { href: string; text: string; acce
   );
 }
 
+function resolveTheme(rawTone: string | null | undefined) {
+  const value = (rawTone || "").trim().toLowerCase();
+  const palette: Record<string, { accent: string; bg: string }> = {
+    mavi: { accent: "#2563eb", bg: "#eff6ff" },
+    blue: { accent: "#2563eb", bg: "#eff6ff" },
+    yesil: { accent: "#16a34a", bg: "#f0fdf4" },
+    green: { accent: "#16a34a", bg: "#f0fdf4" },
+    sari: { accent: "#ca8a04", bg: "#fefce8" },
+    yellow: { accent: "#ca8a04", bg: "#fefce8" },
+    mor: { accent: "#9333ea", bg: "#faf5ff" },
+    purple: { accent: "#9333ea", bg: "#faf5ff" },
+    kirmizi: { accent: "#dc2626", bg: "#fef2f2" },
+    red: { accent: "#dc2626", bg: "#fef2f2" },
+    turuncu: { accent: "#ea580c", bg: "#fff7ed" },
+    orange: { accent: "#ea580c", bg: "#fff7ed" },
+    lacivert: { accent: "#1e3a8a", bg: "#eff6ff" },
+    navy: { accent: "#1e3a8a", bg: "#eff6ff" },
+  };
+
+  if (palette[value]) return palette[value];
+  if (value && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value)) {
+    return { accent: value, bg: "#f8fafc" };
+  }
+  return { accent: "#111827", bg: "#f8fafc" };
+}
+
 export default function DemoLandingPage({ data }: { data: LandingData }) {
   const content = getCategoryContent(data.category);
   const mainCta = data.heroPrimaryCta || content.primaryCta;
   const secondaryCta = data.heroSecondaryCta || content.secondaryCta;
   const liveDemoUrl = normalizeExternalUrl(data.demoUrl);
   const coverImage = normalizeExternalUrl(data.customCoverImage || data.previewImage || null);
-  const accent = data.accentColor && /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(data.accentColor)
-    ? data.accentColor
-    : "#111827";
+  const theme = resolveTheme(data.accentColor);
+  const accent = theme.accent;
   const whatsappTarget = `https://wa.me/${(data.contactPhone || "905000000000").replace(/\D/g, "")}?text=Merhaba,+${encodeURIComponent(data.companyName)}+icin+hazirlanan+siteyi+istiyorum.`;
 
   return (
-    <main className="min-h-screen bg-neutral-50 px-4 py-8 md:px-6 md:py-12">
+    <main className="min-h-screen px-4 py-8 md:px-6 md:py-12" style={{ backgroundColor: theme.bg }}>
       <div className="mx-auto max-w-6xl overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
         <header className="flex items-center justify-between border-b border-neutral-200 px-5 py-4 md:px-8">
           <p className="text-base font-semibold text-neutral-900">{data.companyName}</p>

@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { Buffer } from "node:buffer";
 import PreviewForm from "@/components/PreviewForm";
 import { hasSupabaseEnv, localDemos } from "@/lib/local-data";
+import { findStockImageByTag } from "@/lib/stock-images";
 import { createClient } from "@/lib/supabase/server";
 import { createPreviewSlug } from "@/lib/utils";
 import { Demo } from "@/types/demo";
@@ -42,6 +43,7 @@ export default async function EditDemoPage({ params }: PageProps) {
     const customDescription = String(formData.get("custom_description") || "").trim();
     const customPriceRaw = String(formData.get("custom_price") || "").trim();
     let customCoverImage = String(formData.get("custom_cover_image") || "").trim();
+    const stockImageTag = String(formData.get("stock_image_tag") || "").trim();
     const accentColor = String(formData.get("accent_color") || "").trim();
     const heroPrimaryCta = String(formData.get("hero_primary_cta") || "").trim();
     const heroSecondaryCta = String(formData.get("hero_secondary_cta") || "").trim();
@@ -61,6 +63,7 @@ export default async function EditDemoPage({ params }: PageProps) {
       custom_description: customDescription,
       custom_price: customPriceRaw,
       custom_cover_image: customCoverImage,
+      stock_image_tag: stockImageTag,
       accent_color: accentColor,
       hero_primary_cta: heroPrimaryCta,
       hero_secondary_cta: heroSecondaryCta,
@@ -70,33 +73,48 @@ export default async function EditDemoPage({ params }: PageProps) {
       demo_slug: demoSlug,
     });
 
+    if (!customCoverImage && stockImageTag) {
+      const stockImage = findStockImageByTag(stockImageTag);
+      if (stockImage) {
+        customCoverImage = stockImage.url;
+        previewParams.set("custom_cover_image", customCoverImage);
+      }
+    }
+
     if (isLocalMode) {
       redirect(`/preview/${previewSlug}?${previewParams.toString()}`);
     }
 
     const innerSupabase = await createClient();
     const coverFile = formData.get("custom_cover_file");
+    const maxFileSize = 2 * 1024 * 1024;
 
     if (coverFile instanceof File && coverFile.size > 0) {
-      const bucketName = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "demo-covers";
-      const safeName = `${previewSlug}-${Date.now()}.${coverFile.name.split(".").pop() || "jpg"}`;
-      const objectPath = `previews/${safeName}`;
-      const fileBytes = Buffer.from(await coverFile.arrayBuffer());
+      if (coverFile.size <= maxFileSize) {
+        const bucketName = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "demo-covers";
+        const safeName = `${previewSlug}-${Date.now()}.${coverFile.name.split(".").pop() || "jpg"}`;
+        const objectPath = `previews/${safeName}`;
+        const fileBytes = Buffer.from(await coverFile.arrayBuffer());
 
-      const { error: uploadError } = await innerSupabase.storage
-        .from(bucketName)
-        .upload(objectPath, fileBytes, {
-          contentType: coverFile.type || "image/jpeg",
-          upsert: true,
-        });
-
-      if (!uploadError) {
-        const { data: publicData } = innerSupabase.storage
+        const { error: uploadError } = await innerSupabase.storage
           .from(bucketName)
-          .getPublicUrl(objectPath);
-        customCoverImage = publicData.publicUrl || customCoverImage;
+          .upload(objectPath, fileBytes, {
+            contentType: coverFile.type || "image/jpeg",
+            upsert: true,
+          });
+
+        if (!uploadError) {
+          const { data: publicData } = innerSupabase.storage
+            .from(bucketName)
+            .getPublicUrl(objectPath);
+          customCoverImage = publicData.publicUrl || customCoverImage;
+        }
+      } else {
+        previewParams.set("upload_warning", "max_2mb");
       }
     }
+
+    previewParams.set("custom_cover_image", customCoverImage);
 
     const { error } = await innerSupabase.from("custom_previews").insert({
       demo_id: demoId,

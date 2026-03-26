@@ -1,3 +1,4 @@
+import { stockTagSuggestions } from "@/lib/stock-images";
 type PreviewFormDefaults = {
   company_name?: string;
   custom_title?: string;
@@ -62,12 +63,28 @@ export default function PreviewForm({ action, defaults }: Props) {
           className="block w-full text-sm text-neutral-600 file:mr-3 file:rounded-xl file:border-0 file:bg-neutral-900 file:px-3 file:py-2 file:text-white"
         />
         <p className="mt-2 text-xs text-neutral-500">
-          Not: Canli ortamda Supabase Storage aktifse secilen gorsel yuklenir.
+          Maksimum 2MB. Daha buyuk dosya secilirse yukleme atlanir.
         </p>
+      </div>
+      <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+        <label className="mb-2 block text-sm font-medium text-neutral-700">
+          Hazir Unsplash gorseli sec (etiketle)
+        </label>
+        <input
+          name="stock_image_tag"
+          list="stock-image-tags"
+          placeholder="Orn: sea, camera, beauty, real estate"
+          className="w-full rounded-2xl border bg-white px-4 py-3 text-sm text-neutral-700"
+        />
+        <datalist id="stock-image-tags">
+          {stockTagSuggestions.map((tag) => (
+            <option key={tag} value={tag} />
+          ))}
+        </datalist>
       </div>
       <input
         name="accent_color"
-        placeholder="Vurgu rengi HEX (örn: #111827)"
+        placeholder="Arka plan tonu (orn: mavi, yesil, sari, lacivert)"
         defaultValue={defaults?.accent_color}
         className="w-full rounded-2xl border px-4 py-3"
       />
